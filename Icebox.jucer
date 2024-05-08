@@ -41,8 +41,7 @@
   <EXPORTFORMATS>
     <VS2022 targetFolder="Builds/VisualStudio2022">
       <CONFIGURATIONS>
-        <CONFIGURATION isDebug="1" name="Debug" targetName="Icebox" enablePluginBinaryCopyStep="1"
-                       vst3BinaryLocation="C:\Users\DJ_Level_3\Documents\Ableton VSTs\Icebox\"/>
+        <CONFIGURATION isDebug="1" name="Debug" targetName="Icebox"/>
         <CONFIGURATION isDebug="0" name="Release" targetName="Icebox"/>
       </CONFIGURATIONS>
       <MODULEPATHS>
