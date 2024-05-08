@@ -15,7 +15,8 @@
 class SynthVoice : public SynthesiserVoice
 {
 public:
-    static float expDecay(float now, float targ, float rate);
+    static float expDecay(float now, float targ, float rate, float sRate = 96000);
+    static float linDecay(float base, float now, float targ, float rate, float sRate = 96000);
     bool canPlaySound(SynthesiserSound* sound) override;
     void startNote(int midiNoteNumber, float velocity, SynthesiserSound* sound, int currentPitchWheelPosition) override;
     void stopNote(float velocity, bool allowTailOff) override;
@@ -24,7 +25,7 @@ public:
     void prepareToPlay(double sampleRate, int samplesPerBlock, int outputChannels);
     void renderNextBlock(AudioBuffer<float>& outputBuffer, int startSample, int numSamples) override;
     void formantChanged(float newFormant);
-    void formantEnvelopeChanged(float depth, float newWidth, bool exponential = true);
+    void formantEnvelopeChanged(float depth, float newWidth, bool linear = false);
     float getSampleFromTable(bool chan, float pos);
     bool takingData = true;
     FixedDelayBuffer<float> leftRoll;
@@ -44,6 +45,8 @@ private:
     float sampleRate = 96000;
 
     float position = 0;
+
+    bool exp = true;
 
     float cycleLength = 96000 / 440;
     ADSR adsr;

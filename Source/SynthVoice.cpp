@@ -26,13 +26,12 @@ void SynthVoice::startNote(int midiNoteNumber, float velocity, SynthesiserSound*
     cycleLength = getSampleRate() * formant / frequency;
     position = leftTable.size() - cycleLength;
     adsr.noteOn();
-    takingData = false;
 }
 
 void SynthVoice::stopNote(float velocity, bool allowTailOff)
 {
-    takingData = true;
-    adsr.noteOff();
+    if (allowTailOff) adsr.noteOff();
+    else adsr.reset();
 }
 
 void SynthVoice::controllerMoved(int controllerNumber, int newControllerValue)
@@ -48,6 +47,8 @@ void SynthVoice::pitchWheelMoved(int newPitchWheelValue)
 void SynthVoice::prepareToPlay(double sampleRate, int samplesPerBlock, int outputChannels)
 {
     adsr.setSampleRate(sampleRate);
+    adsr.setParameters(ADSR::Parameters(0.01, 0, 1, 0.1));
+    adsr.reset();
     
     dsp::ProcessSpec spec;
     spec.maximumBlockSize = samplesPerBlock;
@@ -75,32 +76,45 @@ void SynthVoice::formantChanged(float newFormant)
     cycleLength = getSampleRate() * formant / frequency;
 }
 
-void SynthVoice::formantEnvelopeChanged(float depth, float newRate, bool exponential) {
+void SynthVoice::formantEnvelopeChanged(float depth, float newRate, bool linear) {
     float tempTarget = formantBase * std::pow(2, (depth / 12));
     if (tempTarget / frequency * sampleRate > MidiMessage::getMidiNoteInHertz(0)) formantTarget = tempTarget;
     formantRate = 1 - (0.0001 * newRate);
+    exp = !linear;
 }
 
-float SynthVoice::expDecay(float now, float targ, float rate)
+float SynthVoice::expDecay(float now, float targ, float rate, float sRate)
 {
-    return targ + (now - targ) * rate;
+    return targ + ((now - targ) * rate);
+}
+
+float SynthVoice::linDecay(float base, float now, float targ, float rate, float sRate)
+{
+    float delta = (base - targ) * (1 - rate) * 19200 / sRate;
+    if (delta > 0) { // Decreasing
+        return (now - delta < targ) ? targ : (now - delta);
+    }
+    else { // Increasing
+        return (now - delta > targ) ? targ : (now - delta);
+    }
 }
 
 void SynthVoice::renderNextBlock(AudioBuffer<float>& outputBuffer, int startSample, int numSamples)
 {
     jassert(isPrepared);
     dsp::AudioBlock<float> audioBlock{ outputBuffer };
-    if (!takingData) {
-        for (int samp = startSample; samp < startSample + numSamples; samp++) {
-            audioBlock.setSample(0, samp, getSampleFromTable(false, position));
-            audioBlock.setSample(1, samp, getSampleFromTable(true, position));
-            formant = expDecay(formant, formantTarget, formantRate);
-            cycleLength = getSampleRate() * formant / frequency;
-            position += formant;
-            if (position > leftTable.size()) {
-                position -= cycleLength;
-            }
+    for (int samp = startSample; samp < startSample + numSamples; samp++) {
+        audioBlock.setSample(0, samp, getSampleFromTable(false, position));
+        audioBlock.setSample(1, samp, getSampleFromTable(true, position));
+
+        if (exp) formant = expDecay(formant, formantTarget, formantRate, getSampleRate());
+        else formant = linDecay(formantBase, formant, formantTarget, formantRate, getSampleRate());
+
+        cycleLength = getSampleRate() * formant / frequency;
+        position += formant;
+        if (position > leftTable.size()) {
+            position -= cycleLength;
         }
     }
-    //adsr.applyEnvelopeToBuffer(outputBuffer, startSample, numSamples);
+    adsr.applyEnvelopeToBuffer(outputBuffer, startSample, numSamples);
 }

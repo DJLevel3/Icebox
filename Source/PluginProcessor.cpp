@@ -20,6 +20,10 @@ IceboxAudioProcessor::IceboxAudioProcessor()
 {
     synth.addSound(new SynthSound());
     synth.addVoice(new SynthVoice(96000));
+    addParameter(formant = new AudioParameterFloat("formant", "Formant", NormalisableRange<float>(-24, 24, 0.01), 0));
+    addParameter(formantDecay = new AudioParameterFloat("formantDecay", "Decay", NormalisableRange<float>(-24, 24, 0.01), 0));
+    addParameter(formantDecayRate = new AudioParameterFloat("formantDecayRate", "Rate", NormalisableRange<float>(0.01, 2, 0.01), 0));
+    addParameter(formantDecayLinear = new AudioParameterBool("formantDecayLinear", "Linear", false));
 }
 
 IceboxAudioProcessor::~IceboxAudioProcessor()
@@ -98,8 +102,8 @@ void IceboxAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock
         if (auto voice = dynamic_cast<SynthVoice*>(synth.getVoice(i)))
         {
             voice->prepareToPlay(sampleRate, samplesPerBlock, getTotalNumOutputChannels());
-            voice->formantChanged(formant.get());
-            voice->formantEnvelopeChanged(formantDecay.get(), formantDecayRate.get(), true);
+            voice->formantChanged((*formant).get());
+            voice->formantEnvelopeChanged((*formantDecay).get(), (*formantDecayRate).get(), true);
         }
     }
 }
@@ -145,14 +149,17 @@ void IceboxAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer&
         inputData[1].push_back(buffer.getSample(1, j));
         for (int i = 0; i < synth.getNumVoices(); i++) {
             if (auto voice = dynamic_cast<SynthVoice*>(synth.getVoice(i))) {
-                if (formant.get() != lastFormant) {
-                    voice->formantChanged(formant.get());
-                    lastFormant = formant.get();
+                if ((*formant).get() != lastFormant) {
+                    voice->formantChanged((*formant).get());
+                    lastFormant = (*formant).get();
+                    broadcaster.sendChangeMessage();
                 }
-                if (formantDecay.get() != lastFormantDecay || formantDecayRate.get() != lastFormantDecayRate) {
-                    voice->formantEnvelopeChanged(formantDecay.get(), formantDecayRate.get(), true);
-                    lastFormantDecay = formantDecay.get();
-                    lastFormantDecayRate = formantDecayRate.get();
+                if ((*formantDecay).get() != lastFormantDecay || (*formantDecayRate).get() != lastFormantDecayRate || ((*formantDecayLinear).get() != lastLinear)) {
+                    lastFormantDecay = (*formantDecay).get();
+                    lastFormantDecayRate = (*formantDecayRate).get();
+                    lastLinear = (*formantDecayLinear).get();
+                    voice->formantEnvelopeChanged(lastFormantDecay, lastFormantDecayRate, lastLinear);
+                    broadcaster.sendChangeMessage();
                 }
                 voice->leftRoll.writeSample(buffer.getSample(0, j));
                 voice->rightRoll.writeSample(buffer.getSample(1, j));
@@ -184,21 +191,25 @@ AudioProcessorEditor* IceboxAudioProcessor::createEditor()
 //==============================================================================
 void IceboxAudioProcessor::getStateInformation (MemoryBlock& destData)
 {
-    MemoryOutputStream(destData, true).writeFloat(formant.get());
-    MemoryOutputStream(destData, true).writeFloat(formantDecay.get());
-    MemoryOutputStream(destData, true).writeFloat(formantDecayRate.get());
+    auto stream = MemoryOutputStream(destData, true);
+    stream.writeFloat((*formant).get());
+    stream.writeFloat((*formantDecay).get());
+    stream.writeFloat((*formantDecayRate).get());
+    stream.writeBool((*formantDecayLinear).get());
 }
 
 void IceboxAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
     auto stream = MemoryInputStream(data, static_cast<size_t> (sizeInBytes), false);
-    formant.setValueNotifyingHost(formant.convertTo0to1(stream.readFloat()));
-    formantDecay.setValueNotifyingHost(formantDecay.convertTo0to1(stream.readFloat()));
-    formantDecayRate.setValueNotifyingHost(formantDecayRate.convertTo0to1(stream.readFloat()));
+    (*formant).setValueNotifyingHost((*formant).convertTo0to1(stream.readFloat()));
+    (*formantDecay).setValueNotifyingHost((*formantDecay).convertTo0to1(stream.readFloat()));
+    (*formantDecayRate).setValueNotifyingHost((*formantDecayRate).convertTo0to1(stream.readFloat()));
+    (*formantDecayLinear).setValueNotifyingHost(stream.readBool());
 
-    lastFormant = formant.get() - 1;
-    lastFormantDecay = formantDecay.get() - 1;
-    lastFormantDecayRate = formantDecayRate.get() - 1;
+    lastFormant = (*formant).get() - 1;
+    lastFormantDecay = (*formantDecay).get() - 1;
+    lastFormantDecayRate = (*formantDecayRate).get() - 1;
+    lastLinear = !(*formantDecayLinear).get();
 
 }
 

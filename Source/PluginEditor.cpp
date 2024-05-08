@@ -41,28 +41,42 @@ IceboxAudioProcessorEditor::IceboxAudioProcessorEditor (IceboxAudioProcessor& p)
     formantDecayRateSlider.setValue(0.01);
     formantDecayRateSlider.addListener(this);
 
-    float f = audioProcessor.formant.get();
-    float fd = audioProcessor.formantDecay.get();
-    float fdr = audioProcessor.formantDecayRate.get();
+    linearToggle.setButtonText("Linear Decay");
+    linearToggle.setToggleState(false, true);
+    linearToggle.setColour(ToggleButton::ColourIds::textColourId, Colours::black);
+    linearToggle.setColour(ToggleButton::ColourIds::tickColourId, Colours::black);
+    linearToggle.setColour(ToggleButton::ColourIds::tickDisabledColourId, Colours::black);
+    linearToggle.addListener(this);
 
-    formantSlider.setValue(f);
-    formantDecaySlider.setValue(fd);
-    formantDecayRateSlider.setValue(fdr);
+    resized();
 
     addAndMakeVisible(formantSlider);
     addAndMakeVisible(formantDecaySlider);
     addAndMakeVisible(formantDecayRateSlider);
+    addAndMakeVisible(linearToggle);
+
+    audioProcessor.broadcaster.addChangeListener(this);
 }
 
 IceboxAudioProcessorEditor::~IceboxAudioProcessorEditor()
 {
+    audioProcessor.broadcaster.removeChangeListener(this);
 }
 
 void IceboxAudioProcessorEditor::sliderValueChanged(juce::Slider* slider)
 {
-    audioProcessor.formant.setValueNotifyingHost(audioProcessor.formant.convertTo0to1(formantSlider.getValue()));
-    audioProcessor.formantDecay.setValueNotifyingHost(audioProcessor.formantDecay.convertTo0to1(formantDecaySlider.getValue()));
-    audioProcessor.formantDecayRate.setValueNotifyingHost(audioProcessor.formantDecayRate.convertTo0to1(formantDecayRateSlider.getValue()));
+    (*audioProcessor.formant).setValueNotifyingHost((*audioProcessor.formant).convertTo0to1(formantSlider.getValue()));
+    (*audioProcessor.formantDecay).setValueNotifyingHost((*audioProcessor.formantDecay).convertTo0to1(formantDecaySlider.getValue()));
+    (*audioProcessor.formantDecayRate).setValueNotifyingHost((*audioProcessor.formantDecayRate).convertTo0to1(formantDecayRateSlider.getValue()));
+}
+
+void IceboxAudioProcessorEditor::buttonStateChanged(Button* button)
+{
+    (*audioProcessor.formantDecayLinear).setValueNotifyingHost(linearToggle.getToggleState());
+}
+void IceboxAudioProcessorEditor::buttonClicked(Button* button)
+{
+    (*audioProcessor.formantDecayLinear).setValueNotifyingHost((*audioProcessor.formantDecayLinear).convertTo0to1(linearToggle.getToggleState()));
 }
 
 //==============================================================================
@@ -77,26 +91,46 @@ void IceboxAudioProcessorEditor::paint (Graphics& g)
     g.fillAll (Colours::skyblue);
 
     g.setColour (Colours::black);
-    g.setFont (15.0f);
+    g.setFont (30.0f);
     g.drawFittedText ("Icebox", box.removeFromTop(50), Justification::centred, 1);
     auto left = box.removeFromLeft(box.getWidth()*2/3);
 
-    g.drawFittedText("Formant", left.removeFromTop(50), Justification::centred, 1);
+    g.setFont(15.0f);
+
+    g.drawFittedText("Formant", left.removeFromTop(25), Justification::centred, 1);
     formantSlider.setBounds(left);
 
-    g.drawFittedText("Envelope", box.removeFromTop(50), Justification::centred, 1);
+    g.drawFittedText("Envelope", box.removeFromTop(25), Justification::centred, 1);
+    linearToggle.setBounds(box.removeFromBottom(25));
     left = box.removeFromLeft(box.getWidth()/2);
 
-    g.drawFittedText("Target", left.removeFromTop(50), Justification::centred, 1);
+    g.drawFittedText("Target", left.removeFromTop(25), Justification::centred, 1);
     formantDecaySlider.setBounds(left);
 
-    g.drawFittedText("Rate", box.removeFromTop(50), Justification::centred, 1);
+    g.drawFittedText("Rate", box.removeFromTop(25), Justification::centred, 1);
     formantDecayRateSlider.setBounds(box);
 
 }
 
 void IceboxAudioProcessorEditor::resized()
 {
-    // This is generally where you'll want to lay out the positions of any
-    // subcomponents in your editor..
+    setSize(480, 360);
+
+    float f = (*audioProcessor.formant).get();
+    float fd = (*audioProcessor.formantDecay).get();
+    float fdr = (*audioProcessor.formantDecayRate).get();
+    bool l = (*audioProcessor.formantDecayLinear).get();
+
+    linearToggle.setToggleState(l, false);
+    formantSlider.setValue(f);
+    formantDecaySlider.setValue(fd);
+    formantDecayRateSlider.setValue(fdr);
+}
+
+void IceboxAudioProcessorEditor::changeListenerCallback(juce::ChangeBroadcaster* source)
+{
+    if (source == &audioProcessor.broadcaster) {
+        resized();
+        repaint();
+    }
 }

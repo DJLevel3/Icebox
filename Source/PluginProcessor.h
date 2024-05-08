@@ -58,14 +58,17 @@ public:
     void setStateInformation (const void* data, int sizeInBytes) override;
 
 
-    AudioParameterFloat formant{ "formant", "Formant", NormalisableRange<float>(-24,24), 0 };
-    AudioParameterFloat formantDecay{ "formant", "Formant", NormalisableRange<float>(-24,24), 0 };
-    AudioParameterFloat formantDecayRate{ "formant", "Formant", NormalisableRange<float>(0.01,2), 0.01 };
+    AudioParameterFloat* formant;
+    AudioParameterFloat* formantDecay;
+    AudioParameterFloat* formantDecayRate;
+    AudioParameterBool* formantDecayLinear;
 
     float lastFormant = -30;
     float lastFormantDecay = -30;
     float lastFormantDecayRate = -1;
+    bool lastLinear = true;
 
+    ChangeBroadcaster broadcaster;
 
 private:
     //==============================================================================
