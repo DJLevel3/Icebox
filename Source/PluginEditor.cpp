@@ -18,7 +18,7 @@ IceboxAudioProcessorEditor::IceboxAudioProcessorEditor (IceboxAudioProcessor& p)
     setSize (480, 360);
 
     formantSlider.setSliderStyle(Slider::Rotary);
-    formantSlider.setRange(-24, 24, 1);
+    formantSlider.setRange(-24, 24, 0.1);
     formantSlider.setTextBoxStyle(juce::Slider::NoTextBox, false, 90, 0);
     formantSlider.setPopupDisplayEnabled(true, false, this);
     formantSlider.setTextValueSuffix(" semitones");
@@ -26,7 +26,7 @@ IceboxAudioProcessorEditor::IceboxAudioProcessorEditor (IceboxAudioProcessor& p)
     formantSlider.addListener(this);
 
     formantDecaySlider.setSliderStyle(Slider::LinearVertical);
-    formantDecaySlider.setRange(-24, 24, 1);
+    formantDecaySlider.setRange(-24, 24, 0.1);
     formantDecaySlider.setTextBoxStyle(juce::Slider::NoTextBox, false, 90, 0);
     formantDecaySlider.setPopupDisplayEnabled(true, false, this);
     formantDecaySlider.setTextValueSuffix(" semitones");
@@ -48,6 +48,11 @@ IceboxAudioProcessorEditor::IceboxAudioProcessorEditor (IceboxAudioProcessor& p)
     linearToggle.setColour(ToggleButton::ColourIds::tickDisabledColourId, Colours::black);
     linearToggle.addListener(this);
 
+    formantSlider.setComponentID("0");
+    formantDecaySlider.setComponentID("1");
+    formantDecayRateSlider.setComponentID("2");
+    linearToggle.setComponentID("3");
+
     resized();
 
     addAndMakeVisible(formantSlider);
@@ -65,18 +70,36 @@ IceboxAudioProcessorEditor::~IceboxAudioProcessorEditor()
 
 void IceboxAudioProcessorEditor::sliderValueChanged(juce::Slider* slider)
 {
-    (*audioProcessor.formant).setValueNotifyingHost((*audioProcessor.formant).convertTo0to1(formantSlider.getValue()));
-    (*audioProcessor.formantDecay).setValueNotifyingHost((*audioProcessor.formantDecay).convertTo0to1(formantDecaySlider.getValue()));
-    (*audioProcessor.formantDecayRate).setValueNotifyingHost((*audioProcessor.formantDecayRate).convertTo0to1(formantDecayRateSlider.getValue()));
+    int compID = slider->getComponentID().getIntValue();
+    somethingChanged(compID);
 }
 
 void IceboxAudioProcessorEditor::buttonStateChanged(Button* button)
 {
-    (*audioProcessor.formantDecayLinear).setValueNotifyingHost(linearToggle.getToggleState());
+    int compID = button->getComponentID().getIntValue();
+    somethingChanged(compID);
 }
 void IceboxAudioProcessorEditor::buttonClicked(Button* button)
 {
-    (*audioProcessor.formantDecayLinear).setValueNotifyingHost((*audioProcessor.formantDecayLinear).convertTo0to1(linearToggle.getToggleState()));
+    int compID = button->getComponentID().getIntValue();
+    somethingChanged(compID);
+}
+
+void IceboxAudioProcessorEditor::somethingChanged(int compID)
+{
+    switch (compID) {
+    case 0:
+        (*audioProcessor.formant).setValueNotifyingHost((*audioProcessor.formant).convertTo0to1(formantSlider.getValue()));
+        break;
+    case 1:
+        (*audioProcessor.formantDecay).setValueNotifyingHost((*audioProcessor.formantDecay).convertTo0to1(formantDecaySlider.getValue()));
+        break;
+    case 2:
+        (*audioProcessor.formantDecayRate).setValueNotifyingHost((*audioProcessor.formantDecayRate).convertTo0to1(formantDecayRateSlider.getValue()));
+        break;
+    case 3:
+        (*audioProcessor.formantDecayLinear).setValueNotifyingHost(linearToggle.getToggleState());
+    }
 }
 
 //==============================================================================
@@ -115,21 +138,24 @@ void IceboxAudioProcessorEditor::paint (Graphics& g)
 void IceboxAudioProcessorEditor::resized()
 {
     setSize(480, 360);
+}
 
+void IceboxAudioProcessorEditor::reload() {
     float f = (*audioProcessor.formant).get();
     float fd = (*audioProcessor.formantDecay).get();
     float fdr = (*audioProcessor.formantDecayRate).get();
     bool l = (*audioProcessor.formantDecayLinear).get();
 
     linearToggle.setToggleState(l, false);
-    formantSlider.setValue(f);
-    formantDecaySlider.setValue(fd);
-    formantDecayRateSlider.setValue(fdr);
+    formantSlider.setValue(f, juce::dontSendNotification);
+    formantDecaySlider.setValue(fd, juce::dontSendNotification);
+    formantDecayRateSlider.setValue(fdr, juce::dontSendNotification);
 }
 
 void IceboxAudioProcessorEditor::changeListenerCallback(juce::ChangeBroadcaster* source)
 {
     if (source == &audioProcessor.broadcaster) {
+        reload();
         resized();
         repaint();
     }

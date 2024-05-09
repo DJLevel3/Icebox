@@ -29,6 +29,8 @@ private:
     void sliderValueChanged(Slider* slider) override;
     void buttonStateChanged(Button* button) override;
     void buttonClicked(Button* button) override;
+    void somethingChanged(int ID);
+    void reload();
     // This reference is provided as a quick way for your editor to
     // access the processor object that created it.
     IceboxAudioProcessor& audioProcessor;
