@@ -1,13 +1,3 @@
-/*
-  ==============================================================================
-
-    SynthVoice.h
-    Created: 7 Apr 2024 12:34:58pm
-    Author:  DJ_Level_3
-
-  ==============================================================================
-*/
-
 #pragma once
 #include "SynthSound.h"
 #include "FixedDelayBuffer.h"
@@ -26,6 +16,8 @@ public:
     void renderNextBlock(AudioBuffer<float>& outputBuffer, int startSample, int numSamples) override;
     void formantChanged(float newFormant);
     void formantEnvelopeChanged(float depth, float newWidth, bool linear = false);
+    void adsrChanged(float a, float d, float s, float r);
+    void portamentoChanged(float p);
     float getSampleFromTable(bool chan, float pos);
     bool takingData = true;
     FixedDelayBuffer<float> leftRoll;
@@ -40,7 +32,14 @@ private:
     float formantTarget = 1;
     float formantRate = 0.9999;
     float formantRateLinear = 0.001;
+
+    bool frequencyInit = true;
     float frequency = 440;
+    float frequencyTarget = 440;
+
+    float usePortamento = false;
+    float portamentoBase = 440;
+    float portamento = 0.01;
 
     float sampleRate = 96000;
 
@@ -49,7 +48,7 @@ private:
     bool exp = true;
 
     float cycleLength = 96000 / 440;
+    ADSR::Parameters adsrParams{ 0.01, 0, 1, 0.1 };
     ADSR adsr;
-    ADSR::Parameters adsrParams;
     bool isPrepared{ false };
 };

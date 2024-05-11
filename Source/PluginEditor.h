@@ -1,19 +1,8 @@
-/*
-  ==============================================================================
-
-    This file contains the basic framework code for a JUCE plugin editor.
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <JuceHeader.h>
 #include "PluginProcessor.h"
 
-//==============================================================================
-/**
-*/
 class IceboxAudioProcessorEditor  : public AudioProcessorEditor, private Slider::Listener, private ToggleButton::Listener, public juce::ChangeListener
 {
 public:
@@ -38,6 +27,13 @@ private:
     Slider formantSlider;
     Slider formantDecaySlider;
     Slider formantDecayRateSlider;
+
+    Slider aSlider;
+    Slider dSlider;
+    Slider sSlider;
+    Slider rSlider;
+
+    Slider portamentoSlider;
 
     ToggleButton linearToggle;
 

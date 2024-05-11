@@ -1,11 +1,3 @@
-/*
-  ==============================================================================
-
-    This file contains the basic framework code for a JUCE plugin processor.
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <JuceHeader.h>
@@ -13,6 +5,11 @@
 #include "SynthVoice.h"
 #include "SynthSound.h"
 #include "FixedDelayBuffer.h"
+
+#define DEF_ATTACK 0.01
+#define DEF_DECAY 0
+#define DEF_SUSTAIN 100
+#define DEF_RELEASE 0.1
 
 //==============================================================================
 /**
@@ -57,16 +54,32 @@ public:
     void getStateInformation (MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
 
+    void checkParams(SynthVoice* voice);
+
 
     AudioParameterFloat* formant;
     AudioParameterFloat* formantDecay;
     AudioParameterFloat* formantDecayRate;
     AudioParameterBool* formantDecayLinear;
 
+    AudioParameterFloat* attack;
+    AudioParameterFloat* decay;
+    AudioParameterFloat* sustain;
+    AudioParameterFloat* release;
+
+    AudioParameterFloat* portamento;
+
     float lastFormant = -30;
     float lastFormantDecay = -30;
     float lastFormantDecayRate = -1;
     bool lastLinear = true;
+
+    float lastAttack = -1;
+    float lastDecay = -1;
+    float lastSustain = -1;
+    float lastRelease = -1;
+
+    float lastPortamento = -1;
 
     ChangeBroadcaster broadcaster;
 

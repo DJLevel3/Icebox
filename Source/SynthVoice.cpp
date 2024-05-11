@@ -1,13 +1,3 @@
-/*
-  ==============================================================================
-
-    SynthVoice.cpp
-    Created: 7 Apr 2024 12:34:58pm
-    Author:  DJ_Level_3
-
-  ==============================================================================
-*/
-
 #include "SynthVoice.h"
 
 bool SynthVoice::canPlaySound(SynthesiserSound* sound)
@@ -21,7 +11,12 @@ void SynthVoice::startNote(int midiNoteNumber, float velocity, SynthesiserSound*
     leftTable.addArray(leftRoll.getBufferOrdered());
     rightTable.clear();
     rightTable.addArray(rightRoll.getBufferOrdered());
-    frequency = MidiMessage::getMidiNoteInHertz(midiNoteNumber);
+    frequencyTarget = MidiMessage::getMidiNoteInHertz(midiNoteNumber);
+    if (frequencyInit) {
+        frequency = frequencyTarget;
+        frequencyInit = false;
+    }
+    portamentoBase = frequency;
     formant = formantBase;
     cycleLength = getSampleRate() * formant / frequency;
     position = leftTable.size() - cycleLength;
@@ -47,7 +42,7 @@ void SynthVoice::pitchWheelMoved(int newPitchWheelValue)
 void SynthVoice::prepareToPlay(double sampleRate, int samplesPerBlock, int outputChannels)
 {
     adsr.setSampleRate(sampleRate);
-    adsr.setParameters(ADSR::Parameters(0.01, 0, 1, 0.1));
+    adsr.setParameters(adsrParams);
     adsr.reset();
     
     dsp::ProcessSpec spec;
@@ -79,8 +74,19 @@ void SynthVoice::formantChanged(float newFormant)
 void SynthVoice::formantEnvelopeChanged(float depth, float newRate, bool linear) {
     float tempTarget = formantBase * std::pow(2, (depth / 12));
     if (tempTarget / frequency * sampleRate > MidiMessage::getMidiNoteInHertz(0)) formantTarget = tempTarget;
+    else formantTarget = MidiMessage::getMidiNoteInHertz(0);
     formantRate = 1 - (0.0001 * newRate);
     exp = !linear;
+}
+
+void SynthVoice::adsrChanged(float a, float d, float s, float r) {
+    adsrParams = ADSR::Parameters(a, d, s, r);
+    adsr.setParameters(adsrParams);
+}
+
+void SynthVoice::portamentoChanged(float p) {
+    usePortamento = (p < 1);
+    portamento = 1 - (0.001 * p);
 }
 
 float SynthVoice::expDecay(float now, float targ, float rate, float sRate)
@@ -91,7 +97,7 @@ float SynthVoice::expDecay(float now, float targ, float rate, float sRate)
 float SynthVoice::linDecay(float base, float now, float targ, float rate, float sRate)
 {
     float delta = (base - targ) * (1 - rate) * 19200 / sRate;
-    if (delta > 0) { // Decreasing
+    if (delta >= 0) { // Decreasing
         return (now - delta < targ) ? targ : (now - delta);
     }
     else { // Increasing
@@ -106,6 +112,9 @@ void SynthVoice::renderNextBlock(AudioBuffer<float>& outputBuffer, int startSamp
     for (int samp = startSample; samp < startSample + numSamples; samp++) {
         audioBlock.setSample(0, samp, getSampleFromTable(false, position));
         audioBlock.setSample(1, samp, getSampleFromTable(true, position));
+
+        if (usePortamento) frequency = linDecay(portamentoBase, frequency, frequencyTarget, portamento, getSampleRate());
+        else frequency = frequencyTarget;
 
         if (exp) formant = expDecay(formant, formantTarget, formantRate, getSampleRate());
         else formant = linDecay(formantBase, formant, formantTarget, formantRate, getSampleRate());
