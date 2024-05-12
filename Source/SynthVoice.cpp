@@ -36,7 +36,7 @@ void SynthVoice::controllerMoved(int controllerNumber, int newControllerValue)
 
 void SynthVoice::pitchWheelMoved(int newPitchWheelValue)
 {
-
+    pWheel = std::pow(2, ((newPitchWheelValue - 8192) / (8192.f)));
 }
 
 void SynthVoice::prepareToPlay(double sampleRate, int samplesPerBlock, int outputChannels)
@@ -113,8 +113,8 @@ void SynthVoice::renderNextBlock(AudioBuffer<float>& outputBuffer, int startSamp
         audioBlock.setSample(0, samp, getSampleFromTable(false, position));
         audioBlock.setSample(1, samp, getSampleFromTable(true, position));
 
-        if (usePortamento) frequency = linDecay(portamentoBase, frequency, frequencyTarget, portamento, getSampleRate());
-        else frequency = frequencyTarget;
+        if (usePortamento) frequency = linDecay(portamentoBase, frequency, frequencyTarget * pWheel, portamento, getSampleRate());
+        else frequency = frequencyTarget * pWheel;
 
         if (exp) formant = expDecay(formant, formantTarget, formantRate, getSampleRate());
         else formant = linDecay(formantBase, formant, formantTarget, formantRate, getSampleRate());

@@ -33,6 +33,8 @@ private:
     float formantRate = 0.9999;
     float formantRateLinear = 0.001;
 
+    float pWheel = 1;
+
     bool frequencyInit = true;
     float frequency = 440;
     float frequencyTarget = 440;

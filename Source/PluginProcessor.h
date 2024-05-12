@@ -85,8 +85,6 @@ public:
 
 private:
     //==============================================================================
-    FixedDelayBuffer<float> rollBufferL = FixedDelayBuffer<float>();
-    FixedDelayBuffer<float> rollBufferR = FixedDelayBuffer<float>();
     Synthesiser synth;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (IceboxAudioProcessor)
 };
