@@ -79,6 +79,21 @@ IceboxAudioProcessorEditor::IceboxAudioProcessorEditor (IceboxAudioProcessor& p)
     portamentoSlider.setValue(100);
     portamentoSlider.addListener(this);
 
+    wetSlider.setSliderStyle(Slider::Rotary);
+    wetSlider.setRange(0, 100, 1);
+    wetSlider.setTextBoxStyle(Slider::NoTextBox, false, 90, 0);
+    wetSlider.setPopupDisplayEnabled(true, false, this);
+    wetSlider.setTextValueSuffix("%");
+    wetSlider.setValue(100);
+    wetSlider.addListener(this);
+
+    drySlider.setSliderStyle(Slider::Rotary);
+    drySlider.setRange(0, 100, 1);
+    drySlider.setTextBoxStyle(Slider::NoTextBox, false, 90, 0);
+    drySlider.setPopupDisplayEnabled(true, false, this);
+    drySlider.setTextValueSuffix("%");
+    drySlider.setValue(0);
+    drySlider.addListener(this);
 
     formantSlider.setComponentID("0");
     formantDecaySlider.setComponentID("1");
@@ -89,6 +104,8 @@ IceboxAudioProcessorEditor::IceboxAudioProcessorEditor (IceboxAudioProcessor& p)
     sSlider.setComponentID("6");
     rSlider.setComponentID("7");
     portamentoSlider.setComponentID("8");
+    wetSlider.setComponentID("9");
+    drySlider.setComponentID("10");
 
     addAndMakeVisible(formantSlider);
     addAndMakeVisible(formantDecaySlider);
@@ -99,6 +116,8 @@ IceboxAudioProcessorEditor::IceboxAudioProcessorEditor (IceboxAudioProcessor& p)
     addAndMakeVisible(sSlider);
     addAndMakeVisible(rSlider);
     addAndMakeVisible(portamentoSlider);
+    addAndMakeVisible(wetSlider);
+    addAndMakeVisible(drySlider);
 
     audioProcessor.broadcaster.addChangeListener(this);
 }
@@ -155,6 +174,12 @@ void IceboxAudioProcessorEditor::somethingChanged(int compID)
     case 8:
         (*audioProcessor.portamento).setValueNotifyingHost((*audioProcessor.portamento).convertTo0to1(portamentoSlider.getValue()));
         break;
+    case 9:
+        (*audioProcessor.wet).setValueNotifyingHost((*audioProcessor.wet).convertTo0to1(wetSlider.getValue()));
+        break;
+    case 10:
+        (*audioProcessor.dry).setValueNotifyingHost((*audioProcessor.dry).convertTo0to1(drySlider.getValue()));
+        break;
     }
 }
 
@@ -173,22 +198,34 @@ void IceboxAudioProcessorEditor::paint (Graphics& g)
 
     g.setColour (Colours::black);
     g.setFont (30.0f);
-    g.drawFittedText ("Icebox", box.removeFromTop(50), Justification::centred, 1);
+    g.drawFittedText ("Icebox", box.removeFromTop(50).removeFromTop(30), Justification::centred, 1);
     auto left = box.removeFromLeft(320);
+
+    auto lu = left.removeFromLeft(120);
+    auto ll = lu.removeFromBottom(lu.getHeight() / 2);
+
+    g.setFont(20.0f);
+
+    g.drawFittedText("Formant", left.removeFromTop(25).removeFromBottom(20), Justification::centred, 1);
+    formantSlider.setBounds(left);
 
     g.setFont(15.0f);
 
-    g.drawFittedText("Formant", left.removeFromTop(25), Justification::centred, 1);
-    formantSlider.setBounds(left);
+    g.drawFittedText("Wet Level", lu.removeFromTop(25).removeFromBottom(20), Justification::centred, 1);
+    wetSlider.setBounds(lu);
 
-    g.drawFittedText("Envelope", box.removeFromTop(25), Justification::centred, 1);
+    g.drawFittedText("Dry Level", ll.removeFromTop(25).removeFromBottom(20), Justification::centred, 1);
+    drySlider.setBounds(ll);
+    
+
+    g.drawFittedText("Envelope", box.removeFromTop(25).removeFromBottom(20), Justification::centred, 1);
     linearToggle.setBounds(box.removeFromBottom(25));
     left = box.removeFromLeft(80);
 
-    g.drawFittedText("Target", left.removeFromTop(25), Justification::centred, 1);
+    g.drawFittedText("Target", left.removeFromTop(25).removeFromBottom(20), Justification::centred, 1);
     formantDecaySlider.setBounds(left);
 
-    g.drawFittedText("Rate", box.removeFromTop(25), Justification::centred, 1);
+    g.drawFittedText("Rate", box.removeFromTop(25).removeFromBottom(20), Justification::centred, 1);
     formantDecayRateSlider.setBounds(box);
 
     auto aBox = bounds.removeFromLeft(80);
@@ -198,19 +235,19 @@ void IceboxAudioProcessorEditor::paint (Graphics& g)
     bounds.removeFromLeft(35);
     auto pBox = bounds.removeFromLeft(90);
 
-    g.drawFittedText("Attack", aBox.removeFromTop(25), Justification::centred, 1);
+    g.drawFittedText("Attack", aBox.removeFromTop(25).removeFromBottom(20), Justification::centred, 1);
     aSlider.setBounds(aBox);
 
-    g.drawFittedText("Decay", dBox.removeFromTop(25), Justification::centred, 1);
+    g.drawFittedText("Decay", dBox.removeFromTop(25).removeFromBottom(20), Justification::centred, 1);
     dSlider.setBounds(dBox);
 
-    g.drawFittedText("Sustain", sBox.removeFromTop(25), Justification::centred, 1);
+    g.drawFittedText("Sustain", sBox.removeFromTop(25).removeFromBottom(20), Justification::centred, 1);
     sSlider.setBounds(sBox);
 
-    g.drawFittedText("Release", rBox.removeFromTop(25), Justification::centred, 1);
+    g.drawFittedText("Release", rBox.removeFromTop(25).removeFromBottom(20), Justification::centred, 1);
     rSlider.setBounds(rBox);
 
-    g.drawFittedText("Portamento", pBox.removeFromTop(25), Justification::centred, 1);
+    g.drawFittedText("Portamento", pBox.removeFromTop(25).removeFromBottom(20), Justification::centred, 1);
     portamentoSlider.setBounds(pBox);
 }
 
@@ -220,15 +257,38 @@ void IceboxAudioProcessorEditor::resized()
 }
 
 void IceboxAudioProcessorEditor::reload() {
-    float f = (*audioProcessor.formant).get();
-    float fd = (*audioProcessor.formantDecay).get();
-    float fdr = (*audioProcessor.formantDecayRate).get();
-    bool l = (*audioProcessor.formantDecayLinear).get();
+    float f = audioProcessor.lastFormant;
+    float fd = (audioProcessor.lastFormantDecay);
+    float fdr = (audioProcessor.lastFormantDecayRate);
+    bool l = (audioProcessor.lastLinear);
 
-    linearToggle.setToggleState(l, false);
-    formantSlider.setValue(f, juce::dontSendNotification);
-    formantDecaySlider.setValue(fd, juce::dontSendNotification);
-    formantDecayRateSlider.setValue(fdr, juce::dontSendNotification);
+    float a = (audioProcessor.lastAttack);
+    float d = (audioProcessor.lastDecay);
+    float s = (audioProcessor.lastSustain);
+    float r = (audioProcessor.lastRelease);
+
+    float p = (audioProcessor.lastPortamento);
+
+    float wet = (audioProcessor.lastWet);
+    float dry = (audioProcessor.lastDry);
+
+    if (audioProcessor.updateMe[0]) formantSlider.setValue(f, juce::dontSendNotification);
+    if (audioProcessor.updateMe[1]) formantDecaySlider.setValue(fd, juce::dontSendNotification);
+    if (audioProcessor.updateMe[2]) formantDecayRateSlider.setValue(fdr, juce::dontSendNotification);
+    if (audioProcessor.updateMe[3]) linearToggle.setToggleState(l, false);
+
+    if (audioProcessor.updateMe[4]) aSlider.setValue(a, juce::dontSendNotification);
+    if (audioProcessor.updateMe[5]) dSlider.setValue(d, juce::dontSendNotification);
+    if (audioProcessor.updateMe[6]) sSlider.setValue(s, juce::dontSendNotification);
+    if (audioProcessor.updateMe[7]) rSlider.setValue(r, juce::dontSendNotification);
+
+    if (audioProcessor.updateMe[8]) portamentoSlider.setValue(p, juce::dontSendNotification);
+
+    if (audioProcessor.updateMe[9]) wetSlider.setValue(wet, juce::dontSendNotification);
+    if (audioProcessor.updateMe[10]) drySlider.setValue(dry, juce::dontSendNotification);
+    for (int i = 0; i < 11; i++) {
+        audioProcessor.updateMe[i] = false;
+    }
 }
 
 void IceboxAudioProcessorEditor::changeListenerCallback(juce::ChangeBroadcaster* source)

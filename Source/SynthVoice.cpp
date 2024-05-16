@@ -89,6 +89,11 @@ void SynthVoice::portamentoChanged(float p) {
     portamento = 1 - (0.001 * p);
 }
 
+void SynthVoice::wetDryChanged(float w, float d) {
+    wet = w;
+    dry = d;
+}
+
 float SynthVoice::expDecay(float now, float targ, float rate, float sRate)
 {
     return targ + ((now - targ) * rate);
@@ -110,8 +115,18 @@ void SynthVoice::renderNextBlock(AudioBuffer<float>& outputBuffer, int startSamp
     jassert(isPrepared);
     dsp::AudioBlock<float> audioBlock{ outputBuffer };
     for (int samp = startSample; samp < startSample + numSamples; samp++) {
-        audioBlock.setSample(0, samp, getSampleFromTable(false, position));
-        audioBlock.setSample(1, samp, getSampleFromTable(true, position));
+        float dryL = audioBlock.getSample(0, samp) * dry;
+        float dryR = audioBlock.getSample(1, samp) * dry;
+        float wetL = getSampleFromTable(false, position) * wet;
+        float wetR = getSampleFromTable(true, position) * wet;
+        if (adsr.isActive()) {
+            audioBlock.setSample(0, samp, wetL);
+            audioBlock.setSample(1, samp, wetR);
+        }
+        else {
+            audioBlock.setSample(0, samp, dryL);
+            audioBlock.setSample(1, samp, dryR);
+        }
 
         if (usePortamento) frequency = linDecay(portamentoBase, frequency, frequencyTarget * pWheel, portamento, getSampleRate());
         else frequency = frequencyTarget * pWheel;
@@ -120,10 +135,13 @@ void SynthVoice::renderNextBlock(AudioBuffer<float>& outputBuffer, int startSamp
         else formant = linDecay(formantBase, formant, formantTarget, formantRate, getSampleRate());
 
         cycleLength = getSampleRate() * formant / frequency;
-        position += formant;
-        if (position > leftTable.size()) {
-            position -= cycleLength;
+
+        if (adsr.isActive()) {
+            position += formant;
+            if (position >= leftTable.size()) {
+                position -= cycleLength;
+            }
         }
     }
-    adsr.applyEnvelopeToBuffer(outputBuffer, startSample, numSamples);
+    if (adsr.isActive()) adsr.applyEnvelopeToBuffer(outputBuffer, startSample, numSamples);
 }

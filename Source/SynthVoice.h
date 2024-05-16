@@ -18,6 +18,7 @@ public:
     void formantEnvelopeChanged(float depth, float newWidth, bool linear = false);
     void adsrChanged(float a, float d, float s, float r);
     void portamentoChanged(float p);
+    void wetDryChanged(float wet, float dry);
     float getSampleFromTable(bool chan, float pos);
     bool takingData = true;
     FixedDelayBuffer<float> leftRoll;
@@ -42,6 +43,9 @@ private:
     float usePortamento = false;
     float portamentoBase = 440;
     float portamento = 0.01;
+
+    float wet = 1;
+    float dry = 0;
 
     float sampleRate = 96000;
 

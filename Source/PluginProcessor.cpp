@@ -12,17 +12,20 @@ IceboxAudioProcessor::IceboxAudioProcessor()
 {
     synth.addSound(new SynthSound());
     synth.addVoice(new SynthVoice(96000));
-    addParameter(formant = new AudioParameterFloat("formant", "Formant", NormalisableRange<float>(-24, 24, 0.01), 0));
-    addParameter(formantDecay = new AudioParameterFloat("formantDecay", "Decay", NormalisableRange<float>(-24, 24, 0.01), 0));
-    addParameter(formantDecayRate = new AudioParameterFloat("formantDecayRate", "Rate", NormalisableRange<float>(0.01, 2, 0.01), 0.01));
+    addParameter(formant = new AudioParameterFloat("formant", "Formant", -24, 24, 0));
+    addParameter(formantDecay = new AudioParameterFloat("formantDecay", "Decay", -24, 24, 0));
+    addParameter(formantDecayRate = new AudioParameterFloat("formantDecayRate", "Rate", 0.01, 2, 0.01));
     addParameter(formantDecayLinear = new AudioParameterBool("formantDecayLinear", "Linear", false));
 
-    addParameter(attack = new AudioParameterFloat("attack", "Attack", NormalisableRange<float>(0, 1, 0.01), DEF_ATTACK));
-    addParameter(decay = new AudioParameterFloat("decay", "Decay", NormalisableRange<float>(0, 1, 0.01), DEF_DECAY));
-    addParameter(sustain = new AudioParameterFloat("sustain", "Sustain", NormalisableRange<float>(0, 100, 0.1), DEF_SUSTAIN));
-    addParameter(release = new AudioParameterFloat("release", "Release", NormalisableRange<float>(0, 2, 0.01), DEF_RELEASE));
+    addParameter(attack = new AudioParameterFloat("attack", "Attack", 0, 1, DEF_ATTACK));
+    addParameter(decay = new AudioParameterFloat("decay", "Decay", 0, 1, DEF_DECAY));
+    addParameter(sustain = new AudioParameterFloat("sustain", "Sustain", 0, 100, DEF_SUSTAIN));
+    addParameter(release = new AudioParameterFloat("release", "Release", 0, 2, DEF_RELEASE));
 
-    addParameter(portamento = new AudioParameterFloat("portamento", "Portamento", NormalisableRange<float>(0, 100, 0.1), 100));
+    addParameter(portamento = new AudioParameterFloat("portamento", "Portamento", 0, 100, 100));
+
+    addParameter(wet = new AudioParameterFloat("wet", "Wet", 0, 100, 100));
+    addParameter(dry = new AudioParameterFloat("dry", "Dry", 0, 100, 0));
 }
 
 IceboxAudioProcessor::~IceboxAudioProcessor()
@@ -139,62 +142,96 @@ bool IceboxAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) c
 void IceboxAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& midiMessages)
 {
     ScopedNoDenormals noDenormals;
-    int totalNumInputChannels  = getTotalNumInputChannels();
-    int totalNumOutputChannels = getTotalNumOutputChannels();
 
     for (int j = 0; j < buffer.getNumSamples(); j++) {
-        for (int i = 0; i < synth.getNumVoices(); i++) {
-            if (SynthVoice* voice = dynamic_cast<SynthVoice*>(synth.getVoice(i))) {
-                checkParams(voice);
-                voice->leftRoll.writeSample(buffer.getSample(0, j));
-                voice->rightRoll.writeSample(buffer.getSample(1, j));
-            }
+        if (SynthVoice* voice = dynamic_cast<SynthVoice*>(synth.getVoice(0))) {
+            checkParams(voice);
+            voice->leftRoll.writeSample(buffer.getSample(0, j));
+            voice->rightRoll.writeSample(buffer.getSample(1, j));
         }
     }
 
-    buffer.clear(0, buffer.getNumSamples());
+    float b0 = buffer.getSample(0, 0);
+    float b1 = buffer.getSample(1, 0);
 
     synth.renderNextBlock(buffer, midiMessages, 0, buffer.getNumSamples());
-
-    for (int j = 0; j < buffer.getNumSamples(); j++) {
-        buffer.setSample(0, j, buffer.getSample(0, j));
-        buffer.setSample(1, j, buffer.getSample(1, j));
-    }
 }
 
 void IceboxAudioProcessor::checkParams(SynthVoice* voice) {
+    bool anythingChanged = false;
+
     // formant
     if ((*formant).get() != lastFormant) {
-        voice->formantChanged((*formant).get());
         lastFormant = (*formant).get();
-        broadcaster.sendChangeMessage();
+        updateMe[0] = true;
+        voice->formantChanged(lastFormant);
+        anythingChanged = true;
     }
 
     // formant envelope
     if ((*formantDecay).get() != lastFormantDecay || (*formantDecayRate).get() != lastFormantDecayRate || ((*formantDecayLinear).get() != lastLinear)) {
-        lastFormantDecay = (*formantDecay).get();
-        lastFormantDecayRate = (*formantDecayRate).get();
-        lastLinear = (*formantDecayLinear).get();
+        if (lastFormantDecay != (*formantDecay).get()) {
+            lastFormantDecay = (*formantDecay).get();
+            updateMe[1] = true;
+        }
+        if (lastFormantDecayRate != (*formantDecayRate).get()) {
+            lastFormantDecayRate = (*formantDecayRate).get();
+            updateMe[2] = true;
+        }
+        if (lastLinear != (*formantDecayLinear).get()) {
+            lastLinear = (*formantDecayLinear).get();
+            updateMe[3] = true;
+        }
         voice->formantEnvelopeChanged(lastFormantDecay, lastFormantDecayRate, lastLinear);
-        broadcaster.sendChangeMessage();
+        anythingChanged = true;
     }
 
     // adsr
     if ((*attack).get() != lastAttack || (*decay).get() != lastDecay || (*sustain).get() != lastSustain || (*release).get() != lastRelease) {
-        lastAttack = (*attack).get();
-        lastDecay = (*decay).get();
-        lastSustain = (*sustain).get();
-        lastRelease = (*release).get();
+        if (lastAttack != (*attack).get()) {
+            lastAttack = (*attack).get();
+            updateMe[4] = true;
+        }
+        if (lastDecay != (*decay).get()) {
+            lastDecay = (*decay).get();
+            updateMe[5] = true;
+        }
+        if (lastSustain != (*sustain).get()) {
+            lastSustain = (*sustain).get();
+            updateMe[6] = true;
+        }
+        if (lastRelease != (*release).get()) {
+            lastRelease = (*release).get();
+            updateMe[7] = true;
+        }
         voice->adsrChanged(lastAttack, lastDecay, lastSustain / 100, lastRelease);
-        broadcaster.sendChangeMessage();
+        anythingChanged = true;
     }
 
     // portamento
     if ((*portamento).get() != lastPortamento) {
         lastPortamento = (*portamento).get();
+        updateMe[8] = true;
         voice->portamentoChanged(lastPortamento / 100);
-        broadcaster.sendChangeMessage();
+        anythingChanged = true;
     }
+
+    // wet/dry
+    if (lastWet != (*wet).get()) {
+        lastWet = (*wet).get();
+        updateMe[9] = true;
+        voice->wetDryChanged(lastWet / 100., lastDry / 100.);
+        anythingChanged = true;
+    }
+    
+    if (lastDry != (*dry).get()) {
+        lastDry = (*dry).get();
+        updateMe[10] = true;
+        voice->wetDryChanged(lastWet / 100., lastDry / 100.);
+        anythingChanged = true;
+    }
+
+    if (anythingChanged) broadcaster.sendChangeMessage();
 }
 
 //==============================================================================
@@ -223,6 +260,9 @@ void IceboxAudioProcessor::getStateInformation (MemoryBlock& destData)
     stream.writeFloat((*release).get());
 
     stream.writeFloat((*portamento).get());
+
+    stream.writeFloat((*wet).get());
+    stream.writeFloat((*dry).get());
 }
 
 void IceboxAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
@@ -240,6 +280,9 @@ void IceboxAudioProcessor::setStateInformation (const void* data, int sizeInByte
 
     (*portamento).setValueNotifyingHost((*attack).convertTo0to1(stream.readFloat()));
 
+    (*wet).setValueNotifyingHost((*wet).convertTo0to1(stream.readFloat()));
+    (*dry).setValueNotifyingHost((*dry).convertTo0to1(stream.readFloat()));
+
     lastFormant = -30;
     lastFormantDecay = -30;
     lastFormantDecayRate = -1;
@@ -251,6 +294,9 @@ void IceboxAudioProcessor::setStateInformation (const void* data, int sizeInByte
     lastRelease = -1;
 
     lastPortamento = -1;
+
+    lastWet = -1;
+    lastDry = -1;
 }
 
 AudioProcessor* JUCE_CALLTYPE createPluginFilter()

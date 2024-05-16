@@ -69,6 +69,9 @@ public:
 
     AudioParameterFloat* portamento;
 
+    AudioParameterFloat* wet;
+    AudioParameterFloat* dry;
+
     float lastFormant = -30;
     float lastFormantDecay = -30;
     float lastFormantDecayRate = -1;
@@ -80,6 +83,11 @@ public:
     float lastRelease = -1;
 
     float lastPortamento = -1;
+
+    float lastWet = -1;
+    float lastDry = -1;
+
+    bool updateMe[11] = { true, true, true, true, true, true, true, true, true, true, true };
 
     ChangeBroadcaster broadcaster;
 
