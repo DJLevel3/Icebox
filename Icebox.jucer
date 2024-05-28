@@ -3,8 +3,9 @@
 <JUCERPROJECT id="zhW5H4" name="Icebox" projectType="audioplug" useAppConfig="1"
               addUsingNamespaceToJuceHeader="1" jucerFormatVersion="1" companyName="DJ_Level_3"
               companyWebsite="linktr.ee/dj_level_3" companyEmail="djlevel3gaming@gmail.com"
-              pluginFormats="buildVST3" pluginCharacteristicsValue="pluginIsSynth,pluginWantsMidiIn"
-              pluginVST3Category="Distortion,Fx,Pitch Shift" displaySplashScreen="0">
+              pluginFormats="buildAU,buildVST3" pluginCharacteristicsValue="pluginIsSynth,pluginWantsMidiIn"
+              pluginVST3Category="Distortion,Fx,Pitch Shift" displaySplashScreen="0"
+              pluginAUMainType="'aufx'" pluginManufacturerCode="DJL3">
   <MAINGROUP id="vPlo1M" name="Icebox">
     <GROUP id="{3266FB42-B942-AA88-A265-21320EBA0C2F}" name="Source">
       <FILE id="xnOxwh" name="FixedDelayBuffer.h" compile="0" resource="0"
@@ -60,5 +61,26 @@
         <MODULEPATH id="juce_gui_extra" path="../../../../../../JUCE/modules"/>
       </MODULEPATHS>
     </VS2022>
+    <XCODE_MAC targetFolder="Builds/MacOSX">
+      <CONFIGURATIONS>
+        <CONFIGURATION isDebug="1" name="Debug"/>
+        <CONFIGURATION isDebug="0" name="Release"/>
+      </CONFIGURATIONS>
+      <MODULEPATHS>
+        <MODULEPATH id="juce_audio_basics" path="C:\JUCE\modules"/>
+        <MODULEPATH id="juce_audio_devices" path="C:\JUCE\modules"/>
+        <MODULEPATH id="juce_audio_formats" path="C:\JUCE\modules"/>
+        <MODULEPATH id="juce_audio_plugin_client" path="C:\JUCE\modules"/>
+        <MODULEPATH id="juce_audio_processors" path="C:\JUCE\modules"/>
+        <MODULEPATH id="juce_audio_utils" path="C:\JUCE\modules"/>
+        <MODULEPATH id="juce_core" path="C:\JUCE\modules"/>
+        <MODULEPATH id="juce_data_structures" path="C:\JUCE\modules"/>
+        <MODULEPATH id="juce_dsp" path="C:\JUCE\modules"/>
+        <MODULEPATH id="juce_events" path="C:\JUCE\modules"/>
+        <MODULEPATH id="juce_graphics" path="C:\JUCE\modules"/>
+        <MODULEPATH id="juce_gui_basics" path="C:\JUCE\modules"/>
+        <MODULEPATH id="juce_gui_extra" path="C:\JUCE\modules"/>
+      </MODULEPATHS>
+    </XCODE_MAC>
   </EXPORTFORMATS>
 </JUCERPROJECT>
