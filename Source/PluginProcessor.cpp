@@ -216,7 +216,7 @@ void IceboxAudioProcessor::checkParams(SynthVoice* voice) {
         anythingChanged = true;
     }
 
-    // wet/dry
+    // wet
     if (lastWet != (*wet).get()) {
         lastWet = (*wet).get();
         updateMe[9] = true;
@@ -224,6 +224,7 @@ void IceboxAudioProcessor::checkParams(SynthVoice* voice) {
         anythingChanged = true;
     }
     
+    // dry
     if (lastDry != (*dry).get()) {
         lastDry = (*dry).get();
         updateMe[10] = true;
